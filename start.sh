@@ -6,31 +6,38 @@ echo "🚀 Starting Sanaei Panel + nginx reverse proxy..."
 export NGINX_PORT=3000
 export PANEL_PORT=2053
 
-# ===== راه‌اندازی Fail2ban =====
-echo "🛡️ Starting Fail2ban service..."
-mkdir -p /var/run/fail2ban
-fail2ban-server -x start || echo "⚠️ Fail2ban already running or failed to start"
+# ===== راه‌اندازی Fail2ban (در صورت وجود) =====
+echo "🛡️ Checking Fail2ban..."
+if command -v fail2ban-server &> /dev/null; then
+    mkdir -p /var/run/fail2ban
+    fail2ban-server -x start 2>/dev/null || echo "⚠️ Fail2ban already running"
+else
+    echo "⚠️ Fail2ban not found, skipping..."
+fi
 
 cd /usr/local/x-ui
 
 echo "🔧 Configuring Sanaei Panel on port $PANEL_PORT..."
 ./x-ui setting -port $PANEL_PORT -webBasePath /managepanel/ -username admin -password admin -listenIP 0.0.0.0
 
-echo "🔧 Connecting Fail2ban to panel..."
-./x-ui setup-fail2ban || echo "⚠️ Fail2ban setup failed"
+# ===== اتصال Fail2ban به پنل (در صورت وجود) =====
+if command -v fail2ban-server &> /dev/null; then
+    echo "🔧 Connecting Fail2ban to panel..."
+    ./x-ui setup-fail2ban 2>/dev/null || echo "⚠️ Fail2ban setup skipped (already configured)"
+fi
 
-echo "🔧 Starting Sanaei Panel directly in background..."
-nohup ./x-ui run &
+echo "🔧 Starting Sanaei Panel..."
+./x-ui &
 
-echo "⏳ Waiting 15 seconds for panel to fully start..."
+echo "⏳ Waiting 15 seconds..."
 sleep 15
 
-echo "📡 Testing panel connection on port $PANEL_PORT..."
+echo "📡 Testing connection..."
 curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$PANEL_PORT/managepanel/
 
-echo "🔧 Building nginx.conf for port: $NGINX_PORT"
+echo "🔧 Building nginx.conf..."
 envsubst '${NGINX_PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
-echo "▶️ Starting nginx in foreground on port $NGINX_PORT..."
+echo "▶️ Starting nginx..."
 nginx -t
 exec nginx -g "daemon off;"
