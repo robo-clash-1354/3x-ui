@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     gettext-base \
     tzdata \
+    fail2ban \
     && ln -sf /usr/share/zoneinfo/Asia/Tehran /etc/localtime \
     && rm -rf /var/lib/apt/lists/*
 
@@ -21,12 +22,11 @@ RUN echo "Getting latest version of Sanaei Panel..." && \
     rm /tmp/x-ui-linux-${ARCH}.tar.gz && \
     chmod +x /usr/local/x-ui/x-ui
 
-RUN mkdir -p /etc/x-ui /var/log/x-ui
+RUN mkdir -p /etc/x-ui /var/log/x-ui /var/run/fail2ban
 
-# کپی فایل‌ها با بررسی وجود
 COPY nginx.conf.template /etc/nginx/nginx.conf.template
 COPY start.sh /start.sh
-RUN chmod +x /start.sh && ls -la /start.sh  # ← این خط برای دیباگ اضافه شده
+RUN chmod +x /start.sh && dos2unix /start.sh 2>/dev/null || true
 
 RUN mkdir -p /usr/share/nginx/html/view
 COPY sub-view.html /usr/share/nginx/html/view/index.html
