@@ -26,7 +26,7 @@ RUN mkdir -p /etc/x-ui /var/log/x-ui /var/run/fail2ban
 
 COPY nginx.conf.template /etc/nginx/nginx.conf.template
 COPY start.sh /start.sh
-RUN chmod +x /start.sh && dos2unix /start.sh 2>/dev/null || true
+RUN chmod +x /start.sh
 
 RUN mkdir -p /usr/share/nginx/html/view
 COPY sub-view.html /usr/share/nginx/html/view/index.html
