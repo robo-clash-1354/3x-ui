@@ -1,65 +1,31 @@
-worker_processes 1;
-events { worker_connections 1024; }
+#!/bin/bash
+set -e
 
-http {
-    include mime.types;
+echo "🚀 Starting Sanaei Panel + nginx reverse proxy..."
 
-    map $http_user_agent $is_client_app {
-        default 0;
-        "~*v2ray"          1;
-        "~*NekoBox"        1;
-        "~*Shadowrocket"   1;
-        "~*Clash"          1;
-        "~*sing-box"       1;
-        "~*Hiddify"        1;
-        "~*curl"           1;
-        "~*okhttp"         1;
-        "~*Karing"         1;
-        ""                 1;
-    }
+# استفاده از پورت 3000 برای Nginx
+export NGINX_PORT=3000
+export PANEL_PORT=2053
 
-    server {
-        listen ${NGINX_PORT};
+cd /usr/local/x-ui
 
-        # ===== مسیر پنل مدیریت =====
-        location /managepanel/ {
-            proxy_pass http://127.0.0.1:2053/managepanel/;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
+echo "🔧 Configuring Sanaei Panel on port $PANEL_PORT..."
+./x-ui setting -port $PANEL_PORT -webBasePath /managepanel/ -username admin -password admin -listenIP 0.0.0.0
 
-        # ===== مسیر ساب‌اسکریپشن =====
-        location /sub/ {
-            if ($is_client_app = 1) {
-                proxy_pass http://127.0.0.1:2096;
-                break;
-            }
-            root /usr/share/nginx/html;
-            try_files /view/index.html =404;
-        }
+echo "🔧 Starting Sanaei Panel directly in background..."
+nohup ./x-ui run &
 
-        # ===== مسیر خام ساب برای fetch =====
-        location /rawsub/ {
-            proxy_pass http://127.0.0.1:2096/sub/;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-        }
+echo "⏳ Waiting 15 seconds for panel to fully start..."
+sleep 15
 
-        # ===== مسیر اینباند VLESS/WebSocket =====
-        location / {
-            proxy_pass http://127.0.0.1:8080;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-    }
-}
+echo "📡 Testing panel connection on port $PANEL_PORT..."
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$PANEL_PORT/managepanel/
+
+echo "🔧 Building nginx.conf for port: $NGINX_PORT"
+envsubst '${NGINX_PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+
+echo "✅ Nginx config created successfully!"
+
+echo "▶️ Starting nginx in foreground on port $NGINX_PORT..."
+nginx -t
+exec nginx -g "daemon off;"
