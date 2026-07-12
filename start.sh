@@ -3,8 +3,8 @@ set -e
 
 echo "🚀 Starting Sanaei Panel + nginx reverse proxy..."
 
-# پورت را از Railway بگیر یا از 3000 استفاده کن
-export NGINX_PORT=${PORT:-3000}
+# ===> استفاده از پورت ثابت 3000 <===
+export NGINX_PORT=3000
 
 cd /usr/local/x-ui
 
