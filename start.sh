@@ -3,20 +3,21 @@ set -e
 
 echo "🚀 Starting Sanaei Panel + nginx reverse proxy..."
 
-# Nginx روی پورت 3000 گوش می‌دهد (پورت ورودی Railway)
 export NGINX_PORT=3000
-
-# پورت داخلی پنل سنایی (متفاوت از NGINX_PORT)
 export PANEL_PORT=2053
 
 cd /usr/local/x-ui
 
 echo "🔧 Starting Sanaei Panel on internal port $PANEL_PORT..."
-./x-ui setting -port $PANEL_PORT -webBasePath /managepanel/ -username admin -password admin -listenIP 127.0.0.1 &
+./x-ui setting -port $PANEL_PORT -webBasePath /managepanel/ -username admin -password admin -listenIP 0.0.0.0 &
 X_UI_PID=$!
 
-echo "⏳ Waiting 10 seconds for panel to start..."
-sleep 10
+echo "⏳ Waiting 15 seconds for panel to start..."
+sleep 15
+
+# ===> تست مستقیم اتصال به پنل <===
+echo "📡 Testing panel connection on port $PANEL_PORT..."
+curl -v http://127.0.0.1:$PANEL_PORT/managepanel/ || echo "❌ Panel is NOT reachable!"
 
 echo "🔧 Building nginx.conf for port: $NGINX_PORT"
 envsubst '${NGINX_PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
