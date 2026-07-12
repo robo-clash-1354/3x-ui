@@ -4,7 +4,6 @@ events { worker_connections 1024; }
 http {
     include mime.types;
 
-    # تشخیص درخواست از اپلیکیشن VPN یا مرورگر
     map $http_user_agent $is_client_app {
         default 0;
         "~*v2ray"          1;
@@ -23,9 +22,8 @@ http {
         listen ${NGINX_PORT};
 
         # ===== مسیر پنل مدیریت =====
-        # نام این مسیر را به دلخواه تغییر دهید (مثلاً /my-panel/)
         location /managepanel/ {
-            proxy_pass http://127.0.0.1:3000/managepanel/;
+            proxy_pass http://127.0.0.1:2053/managepanel/;  # ← پورت 2053
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
@@ -36,18 +34,16 @@ http {
         }
 
         # ===== مسیر ساب‌اسکریپشن =====
-        # اگر User-Agent مربوط به اپلیکیشن VPN بود، پاسخ خام برگردون
         location /sub/ {
             if ($is_client_app = 1) {
                 proxy_pass http://127.0.0.1:2096;
                 break;
             }
-            # در غیر این صورت، صفحه نمایش زیبا رو نشون بده
             root /usr/share/nginx/html;
             try_files /view/index.html =404;
         }
 
-        # ===== مسیر خام ساب برای fetch جاوااسکریپت =====
+        # ===== مسیر خام ساب برای fetch =====
         location /rawsub/ {
             proxy_pass http://127.0.0.1:2096/sub/;
             proxy_http_version 1.1;
@@ -55,7 +51,6 @@ http {
         }
 
         # ===== مسیر اینباند VLESS/WebSocket =====
-        # مسیر path اینباند (مثلاً /cdn) به اینجا هدایت می‌شود
         location / {
             proxy_pass http://127.0.0.1:8080;
             proxy_http_version 1.1;
